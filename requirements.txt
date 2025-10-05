@@ -1,0 +1,14 @@
+Web Framework & Server
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+gunicorn==22.0.0
+
+Kafka Client
+confluent-kafka==2.4.0
+
+Monitoring & Metrics
+prometheus-client==0.20.0
+
+Testing & Linting
+pytest==8.2.1
+flake8==7.0.0
