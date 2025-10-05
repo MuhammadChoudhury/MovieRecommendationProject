@@ -1,0 +1,163 @@
+name: CI/CD Deployment Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  GCP_REGION: us-central1
+  GCP_SERVICE_NAME: recommendation-api
+
+permissions:
+  contents: read     
+  packages: write    
+  id-token: write    
+
+jobs:
+  lint-and-test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r service/requirements.txt # Assumes requirements are in service/
+          pip install pytest flake8
+
+      - name: Lint with flake8
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings.
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Test with pytest
+        run: pytest service/
+
+  build-and-push:
+    name: Build and Push Docker Image
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push Docker image
+        id: build-push
+        uses: docker/build-push-action@v5
+        with:
+          context: . 
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+      
+      - name: Save Image Digest
+        run: echo ${{ steps.build-push.outputs.digest }} > image_digest.txt
+      
+      - name: Upload Image Digest Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-digest
+          path: image_digest.txt
+
+  deploy:
+    name: Deploy to Cloud Run
+    needs: build-and-push
+    environment:
+      name: production
+      url: ${{ steps.deploy-service.outputs.url }} 
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Image Digest Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: image-digest
+
+      - name: Read Image Digest
+        id: digest
+        run: echo "IMAGE_WITH_DIGEST=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@$(cat image_digest.txt)" >> $GITHUB_ENV
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Deploy to Cloud Run
+        id: deploy-service
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.GCP_SERVICE_NAME }}
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.IMAGE_WITH_DIGEST }}
+
+          secrets: |-
+            KAFKA_BOOTSTRAP=${{ secrets.KAFKA_BOOTSTRAP }}
+            KAFKA_API_KEY=${{ secrets.KAFKA_API_KEY }}
+            KAFKA_API_SECRET=${{ secrets.KAFKA_API_SECRET }}
+            SCHEMA_REGISTRY_URL=${{ secrets.SCHEMA_REGISTRY_URL }}
+      
+      - name: Save Deployed URL
+        run: echo ${{ steps.deploy-service.outputs.url }} > deployed_url.txt
+
+      - name: Upload Deployed URL Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployed-url
+          path: deployed_url.txt
+          
+  post-deploy-summary:
+    name: Write Deployment Summary
+    if: always()
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      
+      - name: Set deployment status
+        id: status-check
+        run: |
+          if [[ "${{ needs.deploy.result }}" == "success" ]]; then
+            echo "STATUS=✅ Success" >> $GITHUB_ENV
+            echo "URL=$(cat artifacts/deployed-url/deployed_url.txt)" >> $GITHUB_ENV
+            echo "IMAGE_DIGEST=$(cat artifacts/image-digest/image_digest.txt)" >> $GITHUB_ENV
+          else
+            echo "STATUS=❌ Failure" >> $GITHUB_ENV
+            echo "URL=N/A" >> $GITHUB_ENV
+            echo "IMAGE_DIGEST=$(cat artifacts/image-digest/image_digest.txt || echo 'N/A')" >> $GITHUB_ENV
+          fi
+
+      - name: Write to Job Summary
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | Deployed URL | Image Digest |" >> $GITHUB_STEP_SUMMARY
+          echo "|:---|:---|:---|" >> $GITHUB_STEP_SUMMARY
+          echo "| ${{ env.STATUS }} | ${{ env.URL }} | \`${{ env.IMAGE_DIGEST }}\` |" >> $GITHUB_STEP_SUMMARY
