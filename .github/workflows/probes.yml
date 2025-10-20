@@ -1,4 +1,3 @@
-# .github/workflows/probes.yml
 name: Run API Probes
 
 on:
@@ -24,14 +23,13 @@ jobs:
         run: pip install requests confluent-kafka
 
       - name: Run probe script
-        # Use GitHub Secrets to securely provide credentials
+        run: python scripts/probe.py
         env:
           API_URL: ${{ secrets.API_URL }}
-          KAFKA_BOOTSTRAP_SERVERS: ${{ secrets.KAFKA_BOOTSTRAP_SERVERS }}
-          # The following are only needed for a secure Kafka connection (like Confluent Cloud)
+          # 👇 Match variable names to what probe.py expects
+          KAFKA_BOOTSTRAP_SERVERS: ${{ secrets.KAFKA_BOOTSTRAP }}
           KAFKA_API_KEY: ${{ secrets.KAFKA_API_KEY }}
           KAFKA_API_SECRET: ${{ secrets.KAFKA_API_SECRET }}
           SCHEMA_REGISTRY_URL: ${{ secrets.SCHEMA_REGISTRY_URL }}
-        # Run the script for just 2 minutes to avoid long-running jobs
-        run: python scripts/probe.py
+
         timeout-minutes: 2
