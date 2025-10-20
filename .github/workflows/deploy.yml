@@ -118,10 +118,11 @@ jobs:
           image: ${{ env.IMAGE_WITH_DIGEST }}
 
           secrets: |-
-            KAFKA_BOOTSTRAP=${{ secrets.KAFKA_BOOTSTRAP }}
-            KAFKA_API_KEY=${{ secrets.KAFKA_API_KEY }}
-            KAFKA_API_SECRET=${{ secrets.KAFKA_API_SECRET }}
-            SCHEMA_REGISTRY_URL=${{ secrets.SCHEMA_REGISTRY_URL }}
+            KAFKA_BOOTSTRAP=KAFKA_BOOTSTRAP:latest
+            KAFKA_API_KEY=KAFKA_API_KEY:latest
+            KAFKA_API_SECRET=KAFKA_API_SECRET:latest
+            SCHEMA_REGISTRY_URL=SCHEMA_REGISTRY_URL:latest
+
       
       - name: Save Deployed URL
         run: echo ${{ steps.deploy-service.outputs.url }} > deployed_url.txt
