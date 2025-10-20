@@ -1,14 +1,28 @@
-Web Framework & Server
+# Web Framework & Server
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
 gunicorn==22.0.0
 
-Kafka Client
+# Data & ML
+pandas==2.2.2
+pyarrow==16.1.0
+numpy==1.26.4
+scikit-learn==1.5.1
+pydantic==2.8.2
+s3fs
+prometheus-fastapi-instrumentator==7.1.0
+joblib
+requests
+
+# Kafka Client
 confluent-kafka==2.4.0
 
-Monitoring & Metrics
+# Environment Variables
+python-dotenv==1.0.1
+
+# Monitoring & Metrics
 prometheus-client==0.20.0
 
-Testing & Linting
+# Testing & Linting
 pytest==8.2.1
 flake8==7.0.0

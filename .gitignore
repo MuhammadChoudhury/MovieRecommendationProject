@@ -143,6 +143,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+kafka.conf
+model_registry/
 
 # Spyder project settings
 .spyderproject

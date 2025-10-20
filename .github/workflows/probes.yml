@@ -1,0 +1,36 @@
+# .github/workflows/probes.yml
+name: Run API Probes
+
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+  # Runs the job every 15 minutes
+  schedule:
+    - cron: '*/15 * * * *'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install requests confluent-kafka-python
+
+      - name: Run probe script
+        # Use GitHub Secrets to securely provide credentials
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          KAFKA_BOOTSTRAP_SERVERS: ${{ secrets.KAFKA_BOOTSTRAP_SERVERS }}
+          # The following are only needed for a secure Kafka connection (like Confluent Cloud)
+          # KAFKA_API_KEY: ${{ secrets.KAFKA_API_KEY }}
+          # KAFKA_API_SECRET: ${{ secrets.KAFKA_API_SECRET }}
+        # Run the script for just 2 minutes to avoid long-running jobs
+        run: python scripts/probe.py
+        timeout-minutes: 2
