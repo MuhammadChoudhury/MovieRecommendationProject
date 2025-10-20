@@ -4,9 +4,9 @@ name: Run API Probes
 on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-  # Runs the job every 15 minutes
+  # Runs the job every 30 minutes
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/30 * * * *'
 
 jobs:
   probe:
