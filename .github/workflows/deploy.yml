@@ -32,8 +32,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r service/requirements.txt # Assumes requirements are in service/
+          pip install -r requirements.txt
           pip install pytest flake8
+
 
       - name: Lint with flake8
         run: |
