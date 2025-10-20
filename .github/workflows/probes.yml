@@ -21,7 +21,7 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-        run: pip install requests confluent-kafka-python
+        run: pip install requests confluent-kafka
 
       - name: Run probe script
         # Use GitHub Secrets to securely provide credentials
