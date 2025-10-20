@@ -8,7 +8,7 @@ on:
 env:
   GCP_REGION: us-central1
   GCP_SERVICE_NAME: recommendation-api
-  ARTIFACT_REPO: movie-recs
+  ARTIFACT_REPO: byteflix
   PROJECT_ID: byteflix-project
 
 permissions:
