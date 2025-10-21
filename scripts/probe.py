@@ -40,7 +40,7 @@ def main():
         print(f"Error creating Kafka producer: {e}")
         return
 
-    print("🚀 Probe script started...")
+    print("Probe script started...")
 
     # ---- limit probe runtime ----
     max_iters = int(os.getenv("PROBE_ITERATIONS", 3))
@@ -79,7 +79,7 @@ def main():
         producer.poll(0)
         time.sleep(10)
 
-    print("✅ Probe finished successfully.")
+    print("Probe finished successfully.")
 
 
 if __name__ == "__main__":
