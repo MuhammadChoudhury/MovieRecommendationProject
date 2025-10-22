@@ -41,13 +41,13 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Run tests
-        run: pytest || true  # temporary placeholder if no tests yet
+        run: pytest || true  
 
   build-and-push:
     name: Build and Push to Google Artifact Registry
     needs: lint-and-test
     runs-on: ubuntu-latest
-    environment: production  # 👈 add this line
+    environment: production 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -74,7 +74,7 @@ jobs:
     name: Deploy to Cloud Run
     needs: build-and-push
     runs-on: ubuntu-latest
-    environment: production  # 👈 add this line
+    environment: production  
     steps:
       - name: Authenticate to Google Cloud
         id: auth

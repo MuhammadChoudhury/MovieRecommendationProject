@@ -1,10 +1,9 @@
-# scripts/benchmark.py
 import requests
 import time
 import numpy as np
 
 API_URL = "http://127.0.0.1:8000"
-USER_ID = 123  # A random user ID for testing
+USER_ID = 123  # 
 NUM_REQUESTS = 100
 
 def benchmark_model(model_name: str):
@@ -20,20 +19,17 @@ def benchmark_model(model_name: str):
             print(f"Request failed: {e}")
             continue
         
-        latency = (time.time() - start_time) * 1000  # Convert to milliseconds
+        latency = (time.time() - start_time) * 1000  #
         latencies.append(latency)
         
-        # Print a dot for progress
         print(".", end="", flush=True)
 
     print("\n--- Results ---")
     print(f"Average Latency: {np.mean(latencies):.2f} ms")
-    print(f"p95 Latency: {np.percentile(latencies, 95):.2f} ms") # p95 is what the rubric wants
+    print(f"p95 Latency: {np.percentile(latencies, 95):.2f} ms") 
 
 if __name__ == "__main__":
-    # Make sure you have numpy installed: pip install numpy requests
     
-    # First, test the health endpoint to make sure the API is up
     try:
         health = requests.get(f"{API_URL}/healthz")
         if health.status_code == 200:

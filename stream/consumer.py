@@ -1,4 +1,3 @@
-# stream/consumer.py
 import json
 import os
 import time
@@ -10,7 +9,6 @@ import s3fs
 from confluent_kafka import Consumer
 from pydantic import BaseModel, ValidationError
 
-# --- Pydantic Schemas for Data Validation ---
 class WatchEvent(BaseModel):
     ts: int
     user_id: int
@@ -23,29 +21,25 @@ class RatingEvent(BaseModel):
     movie_id: int
     rating: int
 
-# --- CHANGE HERE: Match your topic names ---
 SCHEMA_MAP = {
     "byteflix.watch": WatchEvent,
     "byteflix.rate": RatingEvent
 }
 
-# --- CHANGE HERE: Simplified Kafka config for local Docker ---
-# This version doesn't require environment variables and connects directly
-# to your local Kafka instance.
+
 KAFKA_CONFIG = {
     'bootstrap.servers': os.environ['KAFKA_BOOTSTRAP_SERVERS'],
     'security.protocol': 'SASL_SSL',
     'sasl.mechanisms': 'PLAIN',
     'sasl.username': os.environ['KAFKA_API_KEY'],
     'sasl.password': os.environ['KAFKA_API_SECRET'],
-    'group.id': 'stream-ingestor-group-cloud-1', # New group ID for the new cluster
+    'group.id': 'stream-ingestor-group-cloud-1', 
     'auto.offset.reset': 'earliest'
 }
 
 S3_BUCKET = os.environ['S3_BUCKET_NAME']
 TOPICS = ["byteflix.watch", "byteflix.rate"]
 
-# Batching parameters: write to S3 every 1000 messages or every 60 seconds
 BATCH_SIZE = 1000
 BATCH_TIMEOUT_SECONDS = 60
 

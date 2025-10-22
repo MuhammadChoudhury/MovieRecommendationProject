@@ -24,7 +24,6 @@ jobs:
         run: python scripts/probe.py
         env:
           API_URL: ${{ secrets.API_URL }}
-          # 👇 these names must match exactly what probe.py expects
           KAFKA_BOOTSTRAP_SERVERS: ${{ secrets.KAFKA_BOOTSTRAP_SERVERS }}
           KAFKA_API_KEY: ${{ secrets.KAFKA_API_KEY }}
           KAFKA_API_SECRET: ${{ secrets.KAFKA_API_SECRET }}

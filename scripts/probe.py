@@ -1,4 +1,3 @@
-# scripts/probe.py
 import os
 import json
 import random
@@ -6,16 +5,14 @@ import time
 import requests
 from confluent_kafka import Producer
 
-# --- Configuration ---
 API_URL = os.environ['API_URL']
 TEAM_NAME = "byteflix"
 KAFKA_BOOTSTRAP_SERVERS = os.environ.get('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9093')
 
-# --- UPDATED KAFKA CONFIG to handle secure cloud connection ---
 KAFKA_CONFIG = {
     'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS,
 }
-# If running in GitHub Actions, add security credentials
+
 if 'KAFKA_API_KEY' in os.environ:
     KAFKA_CONFIG.update({
         'security.protocol': 'SASL_SSL',
@@ -42,7 +39,6 @@ def main():
 
     print("Probe script started...")
 
-    # ---- limit probe runtime ----
     max_iters = int(os.getenv("PROBE_ITERATIONS", 3))
 
     for i in range(max_iters):
