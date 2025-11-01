@@ -1,4 +1,3 @@
-# Example Cloud Run deployment manifest (placeholder)
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:

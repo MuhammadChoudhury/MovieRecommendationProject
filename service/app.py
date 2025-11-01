@@ -2,18 +2,18 @@ import os
 import joblib
 from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
-
+from config import settings 
 
 MODEL_REGISTRY_PATH = "model_registry"
 
 try:
-    POPULARITY_MODEL_PATH = os.path.join(MODEL_REGISTRY_PATH, "popularity", "v1.0", "model.joblib")
-    popularity_model = joblib.load(POPULARITY_MODEL_PATH)
+    POP_PATH = os.path.join(settings.MODEL_REGISTRY_PATH, settings.POPULARITY_MODEL_DIR, "model.joblib")
+    popularity_model = joblib.load(POP_PATH)
     
-    ITEM_CF_MODEL_PATH = os.path.join(MODEL_REGISTRY_PATH, "item_cf", "v1.0", "model.joblib")
-    item_cf_model = joblib.load(ITEM_CF_MODEL_PATH)
+    CF_PATH = os.path.join(settings.MODEL_REGISTRY_PATH, settings.ITEM_CF_MODEL_DIR, "model.joblib")
+    item_cf_model = joblib.load(CF_PATH)
     
-    print("Models loaded successfully.")
+    print("Models loaded successfully from config paths.")
 except FileNotFoundError:
     print("Warning: Model files not found. API will run with limited functionality.")
     popularity_model = []
@@ -59,7 +59,6 @@ def recommend(user_id: int, k: int = 20, model: str = "popularity"):
         if item_cf_model is None:
             raise HTTPException(status_code=500, detail="Item-CF model not loaded.")
         
-        # Fallback logic:
         recs = popularity_model[:k]
         return {
             "user_id": user_id,

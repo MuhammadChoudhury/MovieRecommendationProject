@@ -39,7 +39,7 @@ def main():
 
     print("Probe script started...")
 
-    max_iters = int(os.getenv("PROBE_ITERATIONS", 3))
+    max_iters = int(os.getenv("PROBE_ITERATIONS", 100))
 
     for i in range(max_iters):
         user_id = random.randint(1, 6040)

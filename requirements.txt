@@ -13,6 +13,8 @@ s3fs
 prometheus-fastapi-instrumentator==7.1.0
 joblib
 requests
+pandera
+pydantic-settings
 
 # Kafka Client
 confluent-kafka==2.4.0

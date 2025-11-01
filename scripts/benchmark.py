@@ -7,7 +7,6 @@ USER_ID = 123  #
 NUM_REQUESTS = 100
 
 def benchmark_model(model_name: str):
-    """Sends requests to the API for a specific model and measures latency."""
     latencies = []
     print(f"\nBenchmarking '{model_name}' model...")
 
