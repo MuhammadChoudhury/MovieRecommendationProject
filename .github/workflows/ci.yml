@@ -16,11 +16,18 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install pytest pytest-cov pandera
+          pip install pytest pytest-cov pandera matplotlib 
+      
+      - name: Train models for testing
+        env:
+          PYTHONPATH: .
+        run: python -m recommender.train
+
       - name: Run tests with coverage
         env:
           PYTHONPATH: .
         run: pytest --cov=service --cov-fail-under=70
+      
       - name: Lint code (Optional, good practice)
         run: |
           pip install ruff
