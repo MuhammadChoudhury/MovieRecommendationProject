@@ -18,7 +18,9 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov pandera
       - name: Run tests with coverage
-        run: pytest --cov=service --cov-fail-under=70 #
+        env:
+          PYTHONPATH: .
+        run: pytest --cov=service --cov-fail-under=70
       - name: Lint code (Optional, good practice)
         run: |
           pip install ruff
