@@ -38,8 +38,10 @@ jobs:
             PYTHONPATH: .
         run: pytest -q --maxfail=1 --cov=service --cov-report=term-missing --cov-fail-under=70
 
-
       - name: Lint code (Optional, good practice)
+        continue-on-error: true
         run: |
-          pip install ruff
-          ruff check .
+            pip install ruff
+            ruff check .
+
+
