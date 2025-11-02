@@ -8,27 +8,46 @@ env:
   PROJECT_ID: byteflix-project
   SERVICE_NAME: recommender-api
   REGION: us-central1
-  REPO: byteflix  # Artifact Registry repo name
+  REPO: byteflix   
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: production            # <<< this unlocks Environment Secrets
+    environment: production  
     steps:
       - uses: actions/checkout@v4
 
       - name: Google Auth
         uses: google-github-actions/auth@v2
         with:
-          # use the exact secret name you created
           credentials_json: ${{ secrets.GCP_CREDENTIALS_JSON }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install train dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pandas numpy scikit-learn joblib
+
+      - name: Generate model artifacts
+        env:
+          PYTHONPATH: .
+        run: python -m recommender.train
+
+      - name: Sanity check model_registry
+        run: ls -R model_registry || true
+
+      - name: Configure Docker to push to Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
       - name: Build and Push Docker Image
         run: |
-          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
           docker build --platform linux/amd64 \
             -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:latest \
             -f docker/recommender.Dockerfile .
