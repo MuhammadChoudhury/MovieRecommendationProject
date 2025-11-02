@@ -11,6 +11,8 @@ WORKDIR /app
 
 COPY --from=builder /usr/local /usr/local
 
+COPY ./config.py /app/config.py
+
 COPY ./service/ /app/service/
 COPY ./model_registry/ /app/model_registry/
 

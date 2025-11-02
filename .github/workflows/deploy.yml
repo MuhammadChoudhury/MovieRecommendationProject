@@ -89,6 +89,11 @@ jobs:
           service: ${{ env.GCP_SERVICE_NAME }}
           region: ${{ env.GCP_REGION }}
           image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.GCP_SERVICE_NAME }}:latest
+          allow_unauthenticated: true
+          env_vars: |
+            MODEL_REGISTRY_PATH=/app/model_registry
+            POPULARITY_MODEL_DIR=popularity
+            ITEM_CF_MODEL_DIR=item_cf
 
           secrets: |-
             KAFKA_BOOTSTRAP=KAFKA_BOOTSTRAP:latest

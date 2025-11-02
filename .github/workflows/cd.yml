@@ -59,3 +59,8 @@ jobs:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:latest
+          allow_unauthenticated: true
+          env_vars: |
+            MODEL_REGISTRY_PATH=/app/model_registry
+            POPULARITY_MODEL_DIR=popularity
+            ITEM_CF_MODEL_DIR=item_cf
