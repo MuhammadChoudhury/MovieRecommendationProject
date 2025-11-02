@@ -9,19 +9,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
+
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install pytest pytest-cov pandera matplotlib 
-      
+          pip install pytest pytest-cov pandera matplotlib
+
       - name: Train models for testing
         env:
           PYTHONPATH: .
         run: python -m recommender.train
+
+      - name: Verify that model files were created
+        run: |
+          echo "Listing all files and directories recursively..."
+          ls -R
 
       - name: Run tests with coverage
         env:
