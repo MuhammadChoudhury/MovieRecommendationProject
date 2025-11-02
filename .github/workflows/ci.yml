@@ -38,7 +38,7 @@ jobs:
           PYTHONPATH: .
         run: |
           pytest -q \
-            --cov=service --cov=recommender \
+            --cov=service --cov-config=recommender \
             --cov-report=term-missing \
             --cov-fail-under=70
 

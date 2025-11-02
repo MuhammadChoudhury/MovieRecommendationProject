@@ -1,0 +1,13 @@
+[run]
+branch = True
+# Only measure the API package
+source = 
+    service
+
+[report]
+exclude_lines =
+    pragma: no cover
+omit =
+    */__init__.py
+    */venv/*
+    tests/*
