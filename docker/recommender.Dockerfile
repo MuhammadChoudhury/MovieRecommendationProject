@@ -1,26 +1,22 @@
-
-FROM python:3.9-slim as builder
-
+FROM python:3.9-slim AS builder
 WORKDIR /app
-
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential
-
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
 FROM python:3.9-slim
-
+ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
-COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
-
-
-COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /usr/local /usr/local
 
 COPY ./service/ /app/service/
 COPY ./model_registry/ /app/model_registry/
 
-EXPOSE 8000
+EXPOSE 8080
 
-CMD ["uvicorn", "service.app:app", "--host", "0.0.0.0", "--port", "8000"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:${PORT:-8080}/healthz || exit 1
+
+CMD ["sh","-c","uvicorn service.app:app --host 0.0.0.0 --port ${PORT:-8080}"]
