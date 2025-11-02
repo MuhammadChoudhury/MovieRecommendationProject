@@ -35,12 +35,9 @@ jobs:
 
       - name: Run tests with coverage
         env:
-          PYTHONPATH: .
-        run: |
-          pytest -q \
-            --cov=service --cov-config=recommender \
-            --cov-report=term-missing \
-            --cov-fail-under=70
+            PYTHONPATH: .
+        run: pytest -q --maxfail=1 --cov=service --cov-report=term-missing --cov-fail-under=70
+
 
       - name: Lint code (Optional, good practice)
         run: |
