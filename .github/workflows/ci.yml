@@ -20,9 +20,12 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov pandera matplotlib
 
-      - name: Train models for testing
+      - name: Train models for testing (synthetic)
         env:
           PYTHONPATH: .
+          MODEL_REGISTRY_PATH: model_registry
+          POPULARITY_MODEL_DIR: popularity
+          ITEM_CF_MODEL_DIR: item_cf
         run: python -m recommender.train
 
       - name: Verify that model files were created
@@ -33,8 +36,12 @@ jobs:
       - name: Run tests with coverage
         env:
           PYTHONPATH: .
-        run: pytest --cov=service --cov-fail-under=70
-      
+        run: |
+          pytest -q \
+            --cov=service --cov=recommender \
+            --cov-report=term-missing \
+            --cov-fail-under=70
+
       - name: Lint code (Optional, good practice)
         run: |
           pip install ruff
