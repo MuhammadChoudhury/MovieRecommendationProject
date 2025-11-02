@@ -144,7 +144,8 @@ ENV/
 env.bak/
 venv.bak/
 kafka.conf
-model_registry/
+model_registry/*
+!model_registry/.gitkeep
 
 # Spyder project settings
 .spyderproject
