@@ -13,12 +13,9 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
     environment: Production 
-
     permissions:
       contents: 'read'
-      id-token: 'write' 
 
     steps:
       - uses: actions/checkout@v4
@@ -53,7 +50,10 @@ jobs:
           env_vars: |
             GIT_SHA=${{ github.sha }}
             IMAGE_DIGEST=${{ steps.build-push.outputs.digest }}
+            
           secrets: |
             KAFKA_BOOTSTRAP_SERVERS=KAFKA_BOOTSTRAP:latest
             KAFKA_API_KEY=KAFKA_API_KEY:latest
             KAFKA_API_SECRET=KAFKA_API_SECRET:latest
+            AWS_ACCESS_KEY_ID=AWS_ACCESS_KEY_ID:latest
+            AWS_SECRET_ACCESS_KEY=AWS_SECRET_ACCESS_KEY:latest
