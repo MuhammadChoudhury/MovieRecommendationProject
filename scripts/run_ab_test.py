@@ -1,6 +1,6 @@
 import json
 # import os
-from collections import deque, defaultdict
+from collections import defaultdict
 from confluent_kafka import Consumer
 import statsmodels.api as sm
 # import time
@@ -30,7 +30,7 @@ def main():
             if msg.error():
                 print(f"Consumer error: {msg.error()}")
                 continue
-            
+
             data = json.loads(msg.value().decode('utf-8'))
             user_id = data.get('user_id')
             ts = data.get('ts')
