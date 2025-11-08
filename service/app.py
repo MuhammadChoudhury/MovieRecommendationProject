@@ -93,7 +93,7 @@ def recommend(user_id: int, k: int = 20):
 
     log_payload = {
         "request_id": request_id,
-        "ts": int(time.time()), # This line will no longer fail
+        "ts": int(time.time()),
         "user_id": user_id,
         "model_version": app.state.model_version,
         "model_used": model_to_use,
@@ -103,12 +103,16 @@ def recommend(user_id: int, k: int = 20):
         "image_digest": IMAGE_DIGEST,
     }
     
+    # --- THIS BLOCK IS THE FIX ---
+    # Use the producer stored in the app's state
     if app.state.kafka_producer:
         try:
-            producer.produce("byteflix.reco_responses", value=json.dumps(log_payload))
-            producer.poll(0)
+            # Change 'producer' to 'app.state.kafka_producer'
+            app.state.kafka_producer.produce("byteflix.reco_responses", value=json.dumps(log_payload))
+            app.state.kafka_producer.poll(0)
         except Exception as e:
             print(f"Failed to produce to Kafka: {e}")
+    # --- END OF FIX ---
 
     return {
         "request_id": request_id,

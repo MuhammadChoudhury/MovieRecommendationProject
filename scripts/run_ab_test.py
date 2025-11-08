@@ -4,6 +4,7 @@ from collections import deque, defaultdict
 from confluent_kafka import Consumer
 import statsmodels.api as sm
 import time
+import numpy as np  # <-- THIS IS THE FIX
 
 KAFKA_CONFIG = { ... } 
 TOPICS = ["byteflix.reco_responses", "byteflix.watch"]
