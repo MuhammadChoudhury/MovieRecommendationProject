@@ -15,12 +15,19 @@ from contextlib import asynccontextmanager
 GIT_SHA = os.environ.get("GIT_SHA", "unknown")
 IMAGE_DIGEST = os.environ.get("IMAGE_DIGEST", "unknown")
 
-# --- 2. Lifespan Function ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("--- API Starting Up: Loading Models & Connecting to Kafka ---")
-    
+    """
+    Handles startup and shutdown events.
+    Connects to Kafka and loads models on startup.
+    """
+    print("--- API Starting Up: Initializing State ---")
+    app.state.kafka_producer = None
+    app.state.models = None
+    app.state.model_version = "unknown"
+
     # --- Connect to Kafka ---
+    print("Attempting to connect to Kafka...")
     try:
         app.state.kafka_producer = Producer({
             'bootstrap.servers': os.environ['KAFKA_BOOTSTRAP_SERVERS'],
@@ -29,33 +36,42 @@ async def lifespan(app: FastAPI):
             'sasl.username': os.environ['KAFKA_API_KEY'],
             'sasl.password': os.environ['KAFKA_API_SECRET'],
         })
-        print("Kafka producer connected.")
-    except KeyError:
-        print("WARNING: Kafka credentials not found. Producer not started.")
-        app.state.kafka_producer = None
+        print(" Kafka producer connected successfully.")
+    except KeyError as e:
+        print(f" ERROR: Missing Kafka environment variable: {e}")
+    except Exception as e:
+        print(f" ERROR: Failed to connect to Kafka: {e}")
 
     # --- Load Models from S3 ---
-    s3 = s3fs.S3FileSystem()
+    print("Attempting to connect to S3 and load models...")
     try:
+        s3 = s3fs.S3FileSystem()
+        print("S3 filesystem connection established.")
+        
         latest_version_path = f"{settings.S3_BUCKET_NAME}/model-registry/latest.txt"
+        print(f"Looking for latest version file at: {latest_version_path}")
         with s3.open(latest_version_path, 'r') as f:
             LATEST_VERSION = f.read().strip()
-        print(f"Latest model version found: {LATEST_VERSION}")
+        print(f" Latest model version found: {LATEST_VERSION}")
 
         POP_PATH = f"{settings.S3_BUCKET_NAME}/model-registry/popularity/{LATEST_VERSION}/model.joblib"
         CF_PATH = f"{settings.S3_BUCKET_NAME}/model-registry/item_cf/{LATEST_VERSION}/model.joblib"
         
-        app.state.models = {
-            "popularity": joblib.load(s3.open(POP_PATH, 'rb')),
-            "item_cf": joblib.load(s3.open(CF_PATH, 'rb')),
-        }
+        print(f"Loading popularity model from: {POP_PATH}")
+        app.state.models = {}
+        app.state.models["popularity"] = joblib.load(s3.open(POP_PATH, 'rb'))
+        
+        print(f"Loading item_cf model from: {CF_PATH}")
+        app.state.models["item_cf"] = joblib.load(s3.open(CF_PATH, 'rb'))
+        
         app.state.model_version = LATEST_VERSION
         print(f"Models for version {LATEST_VERSION} loaded successfully.")
     
     except FileNotFoundError:
-        print("WARNING: Model files not found on S3. API will not serve recommendations.")
-        app.state.models = None
-        app.state.model_version = "error-no-models"
+        print("ERROR: Model file not found on S3. Check paths and 'latest.txt' file.")
+    except Exception as e:
+        # This will catch bad AWS credentials or other S3 errors
+        print(f" ERROR: Failed to load models from S3: {e}")
 
     yield # The application runs here
     
