@@ -4,18 +4,18 @@ on:
   push:
     branches: [ main ]
 
-
 env:
   PROJECT_ID: byteflix-project
   SERVICE_NAME: recommender-api
   REGION: us-central1
+  REPO: byteflix 
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
-      id-token: 'write'
+      id-token: 'write' # Good to keep, but auth will use the JSON key
 
     steps:
       - uses: actions/checkout@v4
@@ -23,32 +23,38 @@ jobs:
       - name: 'Google Auth'
         uses: 'google-github-actions/auth@v2'
         with:
-          # Make sure these are set up in your GCP project
-          workload_identity_provider: 'projects/594250922285/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
-          service_account: 'github-actions-sa@byteflix-project.iam.gserviceaccount.com'
+          credentials_json: '${{ secrets.GCP_CREDENTIALS_JSON }}'
 
       - name: Set up Cloud SDK
         uses: 'google-github-actions/setup-gcloud@v2'
       
+      - name: Configure Docker
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
       - name: Build and Push Docker Image
         id: build-push 
-        run: |-
-          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
-          docker build --platform linux/amd64 -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/byteflix/${{ env.SERVICE_NAME }}:latest -f docker/recommender.Dockerfile .
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/byteflix/${{ env.SERVICE_NAME }}:latest
-          # This line gets the unique image digest after pushing
-          echo "digest=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/byteflix/${{ env.SERVICE_NAME }}:latest)" >> $GITHUB_OUTPUT
+        run: |
+          docker build --platform linux/amd64 \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:latest \
+            -f docker/recommender.Dockerfile .
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:latest
+          
+          # Get the unique image digest for the provenance trace
+          echo "digest=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:latest)" >> $GITHUB_OUTPUT
 
       - name: Deploy to Cloud Run
         uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
-          image: ${{ steps.build-push.outputs.digest }} # Deploy using the unique digest
-          # This injects your Kafka secrets and provenance data
-          env-vars: |
+          image: ${{ steps.build-push.outputs.digest }} 
+          allow_unauthenticated: true
+          
+
+          env_vars: |
             GIT_SHA=${{ github.sha }}
             IMAGE_DIGEST=${{ steps.build-push.outputs.digest }}
+            
           secrets: |
             KAFKA_BOOTSTRAP_SERVERS=KAFKA_BOOTSTRAP:latest
             KAFKA_API_KEY=KAFKA_API_KEY:latest
