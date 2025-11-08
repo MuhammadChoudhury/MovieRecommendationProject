@@ -15,6 +15,7 @@ joblib
 requests
 pandera
 pydantic-settings
+pytest-mock
 
 # Kafka Client
 confluent-kafka==2.4.0

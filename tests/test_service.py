@@ -1,34 +1,54 @@
+# tests/test_service.py
+import pytest
 from fastapi.testclient import TestClient
-from service.app import app 
+from service.app import app  
+from unittest.mock import MagicMock
 
-client = TestClient(app)
 
-def test_healthz():
+@pytest.fixture
+def client():
+
+    
+    app.state.models = {
+        "popularity": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        "item_cf": {"movie_ids": [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]}
+    }
+    app.state.model_version = "v_test_123"
+    app.state.kafka_producer = MagicMock()
+
+    with TestClient(app) as test_client:
+        yield test_client
+    
+
+def test_healthz(client):
     response = client.get("/healthz")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "version": "1.0"}
+    assert response.json() == {"status": "ok", "version": "v_test_123"}
 
-def test_recommend_popularity():
-    response = client.get("/recommend/123?model=popularity&k=5")
-    assert response.status_code == 200
+def test_recommend_popularity(client):
+    # User 123 is odd, should get the 'popularity' model
+    response = client.get("/recommend/123?k=5")
     data = response.json()
+    assert response.status_code == 200
     assert data["user_id"] == 123
-    assert len(data["movie_ids"]) == 5
-    assert data["model"] == "popularity"
+    assert data["model_used"] == "popularity"
+    # Check that it returns the first 5 items from our fake model
+    assert data["movie_ids"] == [1, 2, 3, 4, 5]
 
-def test_invalid_model():
-    response = client.get("/recommend/123?model=invalid_model")
-    assert response.status_code == 400
-    assert "not found" in response.json()["detail"]
+def test_recommend_item_cf(client):
+    # User 124 is even, should get the 'item_cf' model
+    response = client.get("/recommend/124?k=3")
+    data = response.json()
+    assert response.status_code == 200
+    assert data["user_id"] == 124
+    assert data["model_used"] == "item_cf"
+    # Check that it returns the first 3 items from our fake model
+    assert data["movie_ids"] == [10, 9, 8]
 
-def test_item_cf_fallback_returns_k_items():
-    r = client.get("/recommend/1?model=item_cf&k=3")
-    assert r.status_code == 200
-    data = r.json()
-    assert data["model"].startswith("item_cf")
-    assert len(data["movie_ids"]) == 3
-
-def test_recommend_k_zero_returns_empty():
-    r = client.get("/recommend/1?model=popularity&k=0")
-    assert r.status_code == 200
-    assert r.json()["movie_ids"] == []
+def test_healthz_fails_if_models_not_loaded(client):
+    # Test the safety check
+    app.state.models = None # Simulate a failed model load
+    
+    response = client.get("/healthz")
+    assert response.status_code == 503
+    assert "not loaded" in response.json()["detail"]
