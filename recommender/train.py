@@ -4,31 +4,29 @@ import time
 import joblib
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
-from config import settings  # Import your centralized config
+from config import settings  
 from recommender import transform
-import s3fs # Make sure 's3fs' is installed
+import s3fs 
 
-# Initialize S3 filesystem
 s3 = s3fs.S3FileSystem()
 
-def train_and_serialize_all(ratings_df: pd.DataFrame, user_item_matrix: pd.DataFrame):
-    """Orchestrates training and saving for all models to S3."""
-    
-    # Create a unique version ID based on the current time
+
+
+def train_and_serialize_all(ratings_df: pd.DataFrame, user_item_matrix: pd.DataFrame) -> str:
+
     version_id = f"v_{int(time.time())}"
     print(f"--- Training and serializing new model version: {version_id} ---")
     
     _train_popularity(ratings_df, version_id)
     _train_item_cf(user_item_matrix, version_id)
     
-    # --- THIS IS THE KEY ---
-    # After all models are saved, update the 'latest.txt' file
-    # This tells the API which version to load on its next startup.
-    latest_path = f"{settings.S3_BUCKET_NAME}/model-registry/latest.txt"
+    latest_path = f"s3://{settings.S3_BUCKET_NAME}/model-registry/latest.txt"
     print(f"Updating latest version pointer to {version_id} at {latest_path}")
     with s3.open(latest_path, 'w') as f:
         f.write(version_id)
-
+        
+    return version_id 
+    
 def _train_popularity(ratings_df: pd.DataFrame, version: str):
     """Trains and serializes the popularity model to S3."""
     print("Training Popularity model...")
