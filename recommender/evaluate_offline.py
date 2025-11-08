@@ -1,7 +1,7 @@
-import pandas as pd
+# import pandas as pd
 import numpy as np
 import joblib
-from collections import defaultdict
+# from collections import defaultdict
 
 from config import settings
 from recommender import ingest, transform, train  
