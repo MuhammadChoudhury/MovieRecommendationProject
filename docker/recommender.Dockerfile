@@ -1,4 +1,3 @@
-# docker/recommender.Dockerfile
 FROM python:3.9-slim as builder
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential
@@ -11,10 +10,11 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy ONLY the application code
 COPY ./service/ /app/service/
 COPY ./recommender/ /app/recommender/
+
+
 COPY ./config.py /app/config.py
 
-EXPOSE 8080
-CMD ["uvicorn", "service.app:app", "--host", "0.0.0.0", "--port", "8080"]
+EXPOSE 8000
+CMD ["uvicorn", "service.app:app", "--host", "0.0.0.0", "--port", "8000"]
