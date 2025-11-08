@@ -1,3 +1,4 @@
+import os
 from recommender import ingest, transform, train, evaluate_offline
 from recommender.schemas import RatingsSchema 
 from config import settings
