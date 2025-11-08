@@ -1,5 +1,4 @@
-# recommender/drift.py
-import pandas as pd
+# import pandas as pd
 from scipy.stats import ks_2samp
 import matplotlib.pyplot as plt
 from recommender.train import load_movielens_data

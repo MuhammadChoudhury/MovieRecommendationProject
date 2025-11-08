@@ -1,10 +1,10 @@
 import json
-import os
+# import os
 from collections import deque, defaultdict
 from confluent_kafka import Consumer
 import statsmodels.api as sm
-import time
-import numpy as np  # <-- THIS IS THE FIX
+# import time
+import numpy as np  
 
 KAFKA_CONFIG = { ... } 
 TOPICS = ["byteflix.reco_responses", "byteflix.watch"]
@@ -15,7 +15,7 @@ def main():
     consumer.subscribe(TOPICS)
 
     reco_events = defaultdict(dict)
-    watch_events = defaultdict(deque)
+  #  watch_events = defaultdict(deque)
 
     conversions = defaultdict(int)
     total_trials = defaultdict(int)
@@ -24,8 +24,12 @@ def main():
     try:
         while True:
             msg = consumer.poll(timeout=1.0)
-            if msg is None: continue
-            if msg.error(): print(f"Consumer error: {msg.error()}"); continue
+            if msg is None:
+                continue
+
+            if msg.error():
+                print(f"Consumer error: {msg.error()}")
+                continue
             
             data = json.loads(msg.value().decode('utf-8'))
             user_id = data.get('user_id')
