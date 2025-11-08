@@ -9,23 +9,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install pytest pytest-cov pandera matplotlib
-
-      - name: Train models for testing (synthetic)
+          pip install pytest pytest-cov pandera matplotlib statsmodels
+      
+      - name: Train models for testing
         env:
           PYTHONPATH: .
-          MODEL_REGISTRY_PATH: model_registry
-          POPULARITY_MODEL_DIR: popularity
-          ITEM_CF_MODEL_DIR: item_cf
         run: python -m recommender.train
 
       - name: Verify that model files were created
@@ -35,13 +30,10 @@ jobs:
 
       - name: Run tests with coverage
         env:
-            PYTHONPATH: .
-        run: pytest -q --maxfail=1 --cov=service --cov-report=term-missing --cov-fail-under=70
-
+          PYTHONPATH: .
+        run: pytest tests/ --cov=service --cov-fail-under=70
+      
       - name: Lint code (Optional, good practice)
-        continue-on-error: true
         run: |
-            pip install ruff
-            ruff check .
-
-
+          pip install ruff
+          ruff check .
