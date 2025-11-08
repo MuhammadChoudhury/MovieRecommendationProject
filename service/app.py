@@ -38,9 +38,9 @@ async def lifespan(app: FastAPI):
         })
         print(" Kafka producer connected successfully.")
     except KeyError as e:
-        print(f"🔥 ERROR: Missing Kafka environment variable: {e}")
+        print(f" ERROR: Missing Kafka environment variable: {e}")
     except Exception as e:
-        print(f"🔥 ERROR: Failed to connect to Kafka: {e}")
+        print(f" ERROR: Failed to connect to Kafka: {e}")
 
     # --- Load Models from S3 ---
     print("Attempting to connect to S3 and load models...")
