@@ -38,6 +38,7 @@ jobs:
             -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:latest \
             -f docker/recommender.Dockerfile .
           docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:latest
+
           echo "digest=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:latest)" >> $GITHUB_OUTPUT
 
       - name: Deploy to Cloud Run
@@ -45,8 +46,9 @@ jobs:
         with:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
-          image: ${{ steps.build-push.outputs.digest }}
+          image: ${{ steps.build-push.outputs.digest }} 
           allow_unauthenticated: true
+          
           env_vars: |
             GIT_SHA=${{ github.sha }}
             IMAGE_DIGEST=${{ steps.build-push.outputs.digest }}
