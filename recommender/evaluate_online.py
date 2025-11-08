@@ -26,7 +26,7 @@ def main():
     successful_recos = 0
     total_recos = 0
 
-    print("🚀 Starting Online KPI Consumer...")
+    print("Starting Online KPI Consumer...")
     try:
         while True:
             msg = consumer.poll(timeout=1.0)

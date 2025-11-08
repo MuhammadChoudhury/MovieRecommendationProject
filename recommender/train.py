@@ -1,33 +1,58 @@
+# recommender/train.py
 import os
+import time
 import joblib
 import pandas as pd
-from config import settings
+from sklearn.metrics.pairwise import cosine_similarity
+from config import settings  # Import your centralized config
+from recommender import transform
+import s3fs # Make sure 's3fs' is installed
 
-def _train_popularity(ratings_df: pd.DataFrame):
-    popularity_counts = ratings_df.groupby("movie_id").size().sort_values(ascending=False)
+# Initialize S3 filesystem
+s3 = s3fs.S3FileSystem()
+
+def train_and_serialize_all(ratings_df: pd.DataFrame, user_item_matrix: pd.DataFrame):
+    """Orchestrates training and saving for all models to S3."""
+    
+    # Create a unique version ID based on the current time
+    version_id = f"v_{int(time.time())}"
+    print(f"--- Training and serializing new model version: {version_id} ---")
+    
+    _train_popularity(ratings_df, version_id)
+    _train_item_cf(user_item_matrix, version_id)
+    
+    # --- THIS IS THE KEY ---
+    # After all models are saved, update the 'latest.txt' file
+    # This tells the API which version to load on its next startup.
+    latest_path = f"{settings.S3_BUCKET_NAME}/model-registry/latest.txt"
+    print(f"Updating latest version pointer to {version_id} at {latest_path}")
+    with s3.open(latest_path, 'w') as f:
+        f.write(version_id)
+
+def _train_popularity(ratings_df: pd.DataFrame, version: str):
+    """Trains and serializes the popularity model to S3."""
+    print("Training Popularity model...")
+    popularity_counts = ratings_df.groupby('movie_id').size().sort_values(ascending=False)
     model_artifact = popularity_counts.index.tolist()
-    path = os.path.join(settings.MODEL_REGISTRY_PATH, settings.POPULARITY_MODEL_DIR)
-    os.makedirs(path, exist_ok=True)
-    joblib.dump(model_artifact, os.path.join(path, "model.joblib"))
-    print(f"[train] Popularity model saved to {path}")
+    
+    # Serialize to S3
+    path = f"{settings.S3_BUCKET_NAME}/model-registry/popularity/{version}/model.joblib"
+    print(f"Saving Popularity model to {path}")
+    with s3.open(path, 'wb') as f:
+        joblib.dump(model_artifact, f)
 
-def _train_item_cf_stub(movie_ids):
-    model_artifact = {"similarity_matrix": None, "movie_ids": list(movie_ids)}
-    path = os.path.join(settings.MODEL_REGISTRY_PATH, settings.ITEM_CF_MODEL_DIR)
-    os.makedirs(path, exist_ok=True)
-    joblib.dump(model_artifact, os.path.join(path, "model.joblib"))
-    print(f"[train] Item-CF (stub) saved to {path}")
-
-def main():
-    df = pd.DataFrame(
-        {
-            "user_id": [1, 1, 2, 3, 4, 5, 5, 6, 7, 8],
-            "movie_id": [10, 11, 10, 12, 10, 11, 13, 12, 14, 10],
-            "timestamp": range(10),
-        }
-    )
-    _train_popularity(df)
-    _train_item_cf_stub(sorted(df["movie_id"].unique()))
-
-if __name__ == "__main__":
-    main()
+def _train_item_cf(user_item_matrix: pd.DataFrame, version: str):
+    """Trains and serializes the Item-Item CF model to S3."""
+    print("Training Item-Item CF model...")
+    user_item_sparse = transform.to_sparse_matrix(user_item_matrix)
+    item_similarity_matrix = cosine_similarity(user_item_sparse.T)
+    model_artifact = {
+        'similarity_matrix': item_similarity_matrix,
+        'movie_ids': user_item_matrix.columns.tolist()
+    }
+    
+    # Serialize to S3
+    path = f"{settings.S3_BUCKET_NAME}/model-registry/item_cf/{version}/model.joblib"
+    print(f"Saving Item-CF model to {path}")
+    with s3.open(path, 'wb') as f:
+        joblib.dump(model_artifact, f)
