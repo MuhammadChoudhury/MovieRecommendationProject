@@ -1,66 +1,37 @@
 name: Continuous Deployment
 
-on:
-  push:
-    branches: [ main ]
-
-env:
-  PROJECT_ID: byteflix-project
-  SERVICE_NAME: recommender-api
-  REGION: us-central1
-  REPO: byteflix   
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: production  
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Google Auth
-        uses: google-github-actions/auth@v2
+      - name: 'Google Auth'
+        uses: 'google-github-actions/auth@v2'
         with:
-          credentials_json: ${{ secrets.GCP_CREDENTIALS_JSON }}
+          workload_identity_provider: '...'
+          service_account: '...'
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
-
-      - name: Install train dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install pandas numpy scikit-learn joblib
-
-      - name: Generate model artifacts
-        env:
-          PYTHONPATH: .
-        run: python -m recommender.train
-
-      - name: Sanity check model_registry
-        run: ls -R model_registry || true
-
-      - name: Configure Docker to push to Artifact Registry
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
-
+        uses: 'google-github-actions/setup-gcloud@v2'
+      
       - name: Build and Push Docker Image
-        run: |
-          docker build --platform linux/amd64 \
-            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:latest \
-            -f docker/recommender.Dockerfile .
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:latest
+        id: build-push 
+        run: |-
+          # ... (build and push logic) ...
+          # --- ADD THIS: Output the image digest ---
+          echo "digest=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/byteflix/${{ env.SERVICE_NAME }}:latest)" >> $GITHUB_OUTPUT
 
       - name: Deploy to Cloud Run
-        uses: google-github-actions/deploy-cloudrun@v2
+        uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE_NAME }}:latest
-          allow_unauthenticated: true
-          env_vars: |
-            MODEL_REGISTRY_PATH=/app/model_registry
-            POPULARITY_MODEL_DIR=popularity
-            ITEM_CF_MODEL_DIR=item_cf
+          image: ${{ steps.build-push.outputs.digest }} 
+          env-vars: |
+            GIT_SHA=${{ github.sha }}
+            IMAGE_DIGEST=${{ steps.build-push.outputs.digest }}

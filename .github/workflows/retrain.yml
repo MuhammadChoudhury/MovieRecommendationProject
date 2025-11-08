@@ -1,0 +1,52 @@
+# .github/workflows/retrain.yml
+name: Scheduled Retraining
+
+on:
+  workflow_dispatch: # Allows manual trigger
+  schedule:
+    - cron: '0 * * * *' # Runs at 03:00 on Sunday
+
+env:
+  PROJECT_ID: byteflix-project
+  REGION: us-central1
+
+jobs:
+  train-and-publish:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 'Google Auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: 'projects/594250922285/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'github-actions-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install s3fs # For saving to S3
+
+      - name: Run training pipeline
+        env:
+          PYTHONPATH: .
+          # AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }} 
+          # AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: python -m run_pipeline 
+
+      - name: Trigger deployment
+        run: |
+          echo "Model training complete. Triggering new deployment..."
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --set-env-vars="LAST_RETRAIN_TIMESTAMP=$(date +%s)" # Forces a new revision

@@ -1,6 +1,6 @@
-import pandas as pd
+# import pandas as pd
 import numpy as np
-from collections import defaultdict
+# from collections import defaultdict
 import joblib  
 
 from recommender.train import train_popularity_model, train_item_item_cf_model, load_movielens_data
