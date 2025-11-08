@@ -1,15 +1,19 @@
-# import pandas as pd
+import pandas as pd
 import numpy as np
-# from collections import defaultdict
-import joblib  
+import joblib
+from collections import defaultdict
 
-from recommender.train import train_popularity_model, train_item_item_cf_model, load_movielens_data
+from config import settings
+from recommender import ingest, transform, train  
+from recommender.schemas import RatingsSchema 
 
 def evaluate_models():
-
     print("--- Starting Offline Evaluation ---")
     
-    ratings_df = load_movielens_data()
+    ratings_df = ingest.load_ratings_from_s3() 
+    
+    RatingsSchema.validate(ratings_df)
+    
     ratings_df = ratings_df.sort_values(by='timestamp')
     split_point = int(len(ratings_df) * 0.8)
     train_data = ratings_df.iloc[:split_point]
@@ -18,13 +22,16 @@ def evaluate_models():
     print(f"Training data size: {len(train_data)}")
     print(f"Test data size: {len(test_data)}")
 
-    train_popularity_model(train_data)
-    train_item_item_cf_model(train_data)
+    train_user_item_matrix = transform.create_user_item_matrix(train_data)
+    train.train_and_serialize_all(train_data, train_user_item_matrix)
+    print("Models trained on training split successfully.")
 
     test_user_movies = test_data.groupby('user_id')['movie_id'].apply(list).to_dict()
     train_user_movies = train_data.groupby('user_id')['movie_id'].apply(list).to_dict()
 
-    pop_model_recs = joblib.load("model_registry/popularity/v1.0/model.joblib")
+    pop_path = f"s3://{settings.S3_BUCKET_NAME}/model-registry/popularity/{train.version_id}/model.joblib"
+    print(f"Loading test model from {pop_path}")
+    pop_model_recs = joblib.load(train.s3.open(pop_path, 'rb'))
     pop_hits = 0
     total_users = 0
     for user_id, actual_movies in test_user_movies.items():
@@ -36,7 +43,9 @@ def evaluate_models():
     pop_hr10 = pop_hits / total_users if total_users > 0 else 0
     print(f"\nPopularity Model HR@10: {pop_hr10:.4f}")
 
-    cf_model_artifact = joblib.load("model_registry/item_cf/v1.0/model.joblib")
+    cf_path = f"s3://{settings.S3_BUCKET_NAME}/model-registry/item_cf/{train.version_id}/model.joblib"
+    print(f"Loading test model from {cf_path}")
+    cf_model_artifact = joblib.load(train.s3.open(cf_path, 'rb'))
     similarity_matrix = cf_model_artifact['similarity_matrix']
     movie_ids = cf_model_artifact['movie_ids']
     movie_id_to_idx = {movie_id: i for i, movie_id in enumerate(movie_ids)}
@@ -72,7 +81,6 @@ def evaluate_models():
 
     print("\n--- Offline Evaluation Complete ---")
     return {"popularity_hr10": pop_hr10, "item_cf_hr10": cf_hr10}
-
 
 if __name__ == "__main__":
     evaluate_models()
