@@ -4,6 +4,7 @@ import joblib
 import s3fs
 import uuid
 import json
+import time  
 from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
 from confluent_kafka import Producer
@@ -15,13 +16,8 @@ GIT_SHA = os.environ.get("GIT_SHA", "unknown")
 IMAGE_DIGEST = os.environ.get("IMAGE_DIGEST", "unknown")
 
 # --- 2. Lifespan Function ---
-# This function runs when the API starts up
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Handles startup and shutdown events.
-    Connects to Kafka and loads models on startup.
-    """
     print("--- API Starting Up: Loading Models & Connecting to Kafka ---")
     
     # --- Connect to Kafka ---
@@ -69,11 +65,11 @@ async def lifespan(app: FastAPI):
         app.state.kafka_producer.flush()
 
 # --- 3. API Definition ---
-# Pass the lifespan function to the FastAPI app
 app = FastAPI(title="Movie Recommender API", lifespan=lifespan)
 Instrumentator().instrument(app).expose(app)
 
 # --- 4. API Endpoints ---
+# (The rest of your endpoints remain exactly the same)
 @app.get("/healthz", tags=["Status"])
 def healthz():
     if app.state.models is None:
@@ -82,9 +78,6 @@ def healthz():
 
 @app.get("/recommend/{user_id}", tags=["Recommendations"])
 def recommend(user_id: int, k: int = 20):
-    """
-    Get movie recommendations for a given user.
-    """
     if app.state.models is None:
         raise HTTPException(status_code=503, detail="Service unavailable: Models are not loaded.")
 
@@ -98,10 +91,9 @@ def recommend(user_id: int, k: int = 20):
     else:
         recs = app.state.models["item_cf"]["movie_ids"][:k] 
 
-    # --- Provenance & Online Logging ---
     log_payload = {
         "request_id": request_id,
-        "ts": int(time.time()),
+        "ts": int(time.time()), # This line will no longer fail
         "user_id": user_id,
         "model_version": app.state.model_version,
         "model_used": model_to_use,
@@ -113,8 +105,8 @@ def recommend(user_id: int, k: int = 20):
     
     if app.state.kafka_producer:
         try:
-            app.state.kafka_producer.produce("byteflix.reco_responses", value=json.dumps(log_payload))
-            app.state.kafka_producer.poll(0)
+            producer.produce("byteflix.reco_responses", value=json.dumps(log_payload))
+            producer.poll(0)
         except Exception as e:
             print(f"Failed to produce to Kafka: {e}")
 
